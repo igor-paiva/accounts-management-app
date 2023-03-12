@@ -17,12 +17,70 @@
         <strong>Ready to create an app?</strong>
         <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
       </div>
+
+      <h1>{{ message }}</h1>
     </ion-content>
   </ion-page>
 </template>
 
 <script setup lang="ts">
 import { IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
+
+import { ref, onMounted } from 'vue';
+
+import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
+
+const message = ref('oxe');
+
+onMounted(async () => {
+  try {
+    const sqlite = new SQLiteConnection(CapacitorSQLite);
+
+    console.log('sqlite: ', sqlite);
+
+    const db = await sqlite.createConnection(
+      'test',
+      false,
+      'no-encryption',
+      1,
+      false
+    );
+
+    await db?.open();
+
+    console.log("opened: ", db);
+
+    await db?.run('DROP TABLE IF EXISTS tabela;');
+
+    const query = `
+      CREATE TABLE IF NOT EXISTS tabela (
+        id INTEGER PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL
+      );
+    `;
+
+    await db?.run(query);
+
+    await db.run("insert into tabela (id, name) values (3, 'igor');");
+
+    db?.query('select id, name from tabela')
+      .then((res) => {
+        console.log(res);
+
+        message.value = JSON.stringify(res.values && res.values[0]);
+      })
+      .catch((e) => {
+        console.log(e);
+        message.value = e.message;
+      })
+      .finally(() => {
+        sqlite.closeConnection('test', false);
+      });
+  } catch (error: any) {
+    console.log(error);
+    message.value = error.message;
+  }
+});
 </script>
 
 <style scoped>
